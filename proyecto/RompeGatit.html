@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rompecabezas Gatitos 🧩</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f0f8ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  h1 { color: #ff4f9a; text-shadow: 1px 1px #fff; margin-bottom: 10px; }
+
+  #tablero {
+    display: grid;
+    gap: 0; /* sin huecos */
+    border: 3px solid #ff4f9a;
+    border-radius: 10px;
+    background: #e6f0ff;
+    margin-bottom: 20px;
+  }
+
+  .celda {
+    background: #cce0ff;
+    border: 1px solid #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+    overflow: hidden;
+    box-sizing: border-box; 
+  }
+
+  #piezas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+    min-height: 120px;
+    margin-bottom: 20px;
+  }
+
+  .pieza {
+    cursor: grab;
+    background-size: cover;
+    background-repeat: no-repeat;
+    border-radius: 5px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .pieza:active {
+    transform: scale(1.05) rotateX(10deg) rotateY(10deg);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+  }
+
+  #info { margin-bottom: 10px; font-size: 18px; color: #ff4f9a; text-align: center; }
+
+  #reiniciar {
+    font-size: 18px;
+    padding: 8px 15px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    background: #ff4f9a;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  #reiniciar:hover { transform: scale(1.05); background: #ff70b0; }
+
+  #pantalla {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 28px;
+    color: #ff4f9a;
+    text-align: center;
+    z-index: 10;
+    background: rgba(255,255,255,0.95);
+  }
+
+  #pantalla button {
+    margin-top: 20px;
+    font-size: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    background: #ff4f9a;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  #pantalla button:hover { transform: scale(1.05); background: #ff70b0; }
+
+  /* FLECHITA DISCRETA */
+  #volver {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    font-size: 18px;
+    text-decoration: none;
+    color: #ff4f9a;
+    z-index: 1000;
+    padding: 2px 5px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+  }
+  #volver:hover {
+    background: rgba(255, 79, 154, 0.1);
+    transform: translateY(-1px);
+  }
+
+  @media (max-width: 500px){ #tablero { width: 90vw; height: 90vw; } }
+</style>
+</head>
+<body>
+
+<!-- FLECHITA DISCRETA -->
+<a id="volver" href="Gatitos.html">⬅ Volver</a>
+
+<h1>Rompecabezas Gatitos 🧩</h1>
+<div id="info">Nivel: 1 | Movimientos: 0 | Tiempo: 0s</div>
+<button id="reiniciar">Reiniciar Nivel</button>
+<div id="tablero"></div>
+<div id="piezas"></div>
+
+<div id="pantalla">
+  <div id="mensaje"></div>
+  <button id="siguiente">Siguiente Nivel</button>
+</div>
+
+<script>
+const niveles = [
+  { tamaño: 3, img: 'https://i.pinimg.com/474x/01/da/9a/01da9a430797f66f98b32385e596ca79.jpg' },
+  { tamaño: 4, img: 'https://i.pinimg.com/474x/01/da/9a/01da9a430797f66f98b32385e596ca79.jpg' },
+  { tamaño: 5, img: 'https://i.pinimg.com/474x/01/da/9a/01da9a430797f66f98b32385e596ca79.jpg' }
+];
+
+let nivelActual = 0, movimientos = 0, tiempo = 0, temporizador, filas, columnas, dragged = null;
+
+const tablero = document.getElementById("tablero");
+const piezasCont = document.getElementById("piezas");
+const info = document.getElementById("info");
+const pantalla = document.getElementById("pantalla");
+const mensaje = document.getElementById("mensaje");
+const btnSiguiente = document.getElementById("siguiente");
+const btnReiniciar = document.getElementById("reiniciar");
+let piezas = [];
+
+function iniciarNivel(){
+  piezasCont.innerHTML = '';
+  tablero.innerHTML = '';
+  piezas = [];
+  movimientos = 0;
+  tiempo = 0;
+  clearInterval(temporizador);
+
+  filas = columnas = niveles[nivelActual].tamaño;
+  const img = niveles[nivelActual].img;
+
+  const tableroSize = Math.min(300, window.innerWidth*0.9);
+  tablero.style.width = tablero.style.height = tableroSize+'px';
+  tablero.style.gridTemplateColumns = `repeat(${columnas}, 1fr)`;
+  tablero.style.gridTemplateRows = `repeat(${filas}, 1fr)`;
+
+  const gapTotal = 0;
+  const bordeTotal = columnas * 2;
+  const celdaSize = (tableroSize - bordeTotal - gapTotal) / columnas;
+
+  for(let y=0; y<filas; y++){
+    for(let x=0; x<columnas; x++){
+      const celda = document.createElement("div");
+      celda.className = "celda";
+      celda.dataset.x = x;
+      celda.dataset.y = y;
+      celda.style.width = celda.style.height = celdaSize + "px";
+      tablero.appendChild(celda);
+    }
+  }
+
+  for(let y=0; y<filas; y++){
+    for(let x=0; x<columnas; x++){
+      const pieza = document.createElement("div");
+      pieza.className = "pieza";
+      pieza.dataset.correctX = x;
+      pieza.dataset.correctY = y;
+      pieza.style.width = pieza.style.height = celdaSize + "px";
+      pieza.style.backgroundImage = `url(${img})`;
+      pieza.style.backgroundSize = tableroSize + "px " + tableroSize + "px";
+      pieza.style.backgroundPosition = `-${x*celdaSize}px -${y*celdaSize}px`;
+      pieza.setAttribute("draggable", true);
+      piezas.push(pieza);
+    }
+  }
+
+  piezas.sort(()=>Math.random()-0.5);
+  piezas.forEach(p=> piezasCont.appendChild(p));
+
+  temporizador = setInterval(()=>{ tiempo++; actualizarInfo(); },1000);
+  actualizarInfo();
+}
+
+document.addEventListener("dragstart", e=>{ if(e.target.classList.contains("pieza")) dragged = e.target; });
+document.addEventListener("dragover", e=> e.preventDefault());
+document.addEventListener("drop", e=>{
+  if(e.target.classList.contains("celda") && dragged){
+    if(e.target.children.length===0){
+      e.target.appendChild(dragged);
+      dragged.style.position = "static";
+      dragged = null;
+      movimientos++;
+      actualizarInfo();
+      verificarVictoria();
+    }
+  }
+});
+
+function actualizarInfo(){
+  info.textContent = `Nivel: ${nivelActual+1} | Movimientos: ${movimientos} | Tiempo: ${tiempo}s`;
+}
+
+function verificarVictoria(){
+  let completado = true;
+  document.querySelectorAll(".celda").forEach(c=>{
+    if(c.children.length>0){
+      const pieza = c.children[0];
+      if(parseInt(pieza.dataset.correctX)!==parseInt(c.dataset.x) ||
+         parseInt(pieza.dataset.correctY)!==parseInt(c.dataset.y)){
+           completado = false;
+         }
+    } else completado = false;
+  });
+  if(completado){
+    clearInterval(temporizador);
+    mensaje.textContent = `🎉 ¡Nivel ${nivelActual+1} completado! Movimientos: ${movimientos}, Tiempo: ${tiempo}s`;
+    pantalla.style.display = "flex";
+  }
+}
+
+btnSiguiente.addEventListener("click", ()=>{ pantalla.style.display = "none"; nivelActual = (nivelActual + 1) % niveles.length; iniciarNivel(); });
+btnReiniciar.addEventListener("click", ()=>{ iniciarNivel(); });
+
+iniciarNivel();
+</script>
+</body>
+</html>
