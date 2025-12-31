@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gatito Comelón 😺</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      cursor: none;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ffe6f0, #e6f7ff);
+    }
+
+    /* FLECHITA DISCRETA */
+    #volver {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      font-size: 18px;
+      text-decoration: none;
+      color: #ff4f9a;
+      z-index: 1000;
+      padding: 2px 5px;
+      border-radius: 5px;
+      transition: all 0.2s ease;
+    }
+    #volver:hover {
+      background: rgba(255, 79, 154, 0.1);
+      transform: translateY(-1px);
+    }
+
+    #ui {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #ff4f9a;
+      text-align: right;
+    }
+
+    #gatito {
+      position: absolute;
+      font-size: 48px;
+      pointer-events: none;
+    }
+
+    .objeto {
+      position: absolute;
+      font-size: 32px;
+    }
+
+    #pantalla {
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-size: 24px;
+      color: #ff4f9a;
+      text-align: center;
+    }
+
+    #reiniciarBtn {
+      margin-top: 12px;
+      padding: 5px 10px;
+      font-size: 16px;
+      background: #ff4f9a;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #reiniciarBtn:hover { background: #ff80b0; }
+  </style>
+</head>
+
+<body>
+
+  <!-- FLECHITA DISCRETA -->
+  <a id="volver" href="Gatitos.html">⬅ Volver</a>
+
+  <div id="ui">
+    <div id="nivel">Nivel: Fácil</div>
+    <div id="score">Puntos: 0</div>
+    <div id="objetivo">Objetivo: 0</div>
+    <div id="time">Tiempo: 10</div>
+  </div>
+
+  <div id="gatito">😺</div>
+  <div id="pantalla"></div>
+
+  <script>
+    const gatito = document.getElementById("gatito");
+    const scoreDiv = document.getElementById("score");
+    const timeDiv = document.getElementById("time");
+    const nivelDiv = document.getElementById("nivel");
+    const objetivoDiv = document.getElementById("objetivo");
+    const pantalla = document.getElementById("pantalla");
+
+    let objetos = [];
+    let puntos = 0;
+    let tiempo = 30;
+    let temporizador;
+    let juegoActivo = true;
+
+    const emojis = ["🍗","🍖","🥩","🍕","🍔"];
+
+    const niveles = [
+      { nombre: "Fácil", objetos: 4, objetivo: 10 },
+      { nombre: "Medio", objetos: 3, objetivo: 15 },
+      { nombre: "Difícil", objetos: 2, objetivo: 20 }
+    ];
+
+    let nivelActual = 0;
+
+    function crearObjetos(cantidad) {
+      objetos.forEach(o => o.remove());
+      objetos = [];
+
+      for (let i = 0; i < cantidad; i++) {
+        const obj = document.createElement("div");
+        obj.className = "objeto";
+        obj.textContent = emojis[i % emojis.length];
+        document.body.appendChild(obj);
+        moverObjeto(obj);
+        objetos.push(obj);
+      }
+    }
+
+    function moverObjeto(obj) {
+      obj.style.left = Math.random() * (window.innerWidth - 50) + "px";
+      obj.style.top = Math.random() * (window.innerHeight - 50) + "px";
+    }
+
+    function iniciarNivel() {
+      puntos = 0;
+      tiempo = 10;
+      juegoActivo = true;
+      pantalla.style.display = "none";
+      document.body.style.cursor = "none";
+
+      const nivel = niveles[nivelActual];
+
+      nivelDiv.textContent = "Nivel: " + nivel.nombre;
+      scoreDiv.textContent = "Puntos: 0";
+      objetivoDiv.textContent = "Objetivo: " + nivel.objetivo;
+      timeDiv.textContent = "Tiempo: " + tiempo;
+
+      crearObjetos(nivel.objetos);
+
+      clearInterval(temporizador);
+      temporizador = setInterval(() => {
+        tiempo--;
+        timeDiv.textContent = "Tiempo: " + tiempo;
+
+        if (tiempo <= 0) {
+          terminarNivel();
+        }
+      }, 1000);
+    }
+
+    function terminarNivel() {
+      juegoActivo = false;
+      clearInterval(temporizador);
+
+      const nivel = niveles[nivelActual];
+
+      if (puntos >= nivel.objetivo) {
+        subirNivel();
+      } else {
+        pantalla.style.display = "flex";
+        document.body.style.cursor = "auto";
+        pantalla.innerHTML = `❌ No alcanzaste el objetivo<br>Puntos: ${puntos}`;
+        const btn = document.createElement("button");
+        btn.id = "reiniciarBtn";
+        btn.textContent = "Volver a intentar";
+        btn.onclick = () => iniciarNivel();
+        pantalla.appendChild(btn);
+      }
+    }
+
+    function subirNivel() {
+      nivelActual++;
+
+      if (nivelActual >= niveles.length) {
+        pantalla.style.display = "flex";
+        document.body.style.cursor = "auto";
+        pantalla.innerHTML = "🏆 ¡Ganaste el juego!";
+        return;
+      }
+
+      pantalla.style.display = "flex";
+      pantalla.innerHTML = "✅ Nivel superado";
+
+      setTimeout(() => iniciarNivel(), 1500);
+    }
+
+    document.addEventListener("mousemove", e => {
+      if (!juegoActivo) return;
+
+      gatito.style.left = e.clientX - 24 + "px";
+      gatito.style.top = e.clientY - 24 + "px";
+
+      const g = gatito.getBoundingClientRect();
+
+      objetos.forEach(obj => {
+        const o = obj.getBoundingClientRect();
+
+        if (
+          g.right > o.left &&
+          g.left < o.right &&
+          g.bottom > o.top &&
+          g.top < o.bottom
+        ) {
+          puntos++;
+          scoreDiv.textContent = "Puntos: " + puntos;
+          moverObjeto(obj);
+
+          if (puntos >= niveles[nivelActual].objetivo) {
+            juegoActivo = false;
+            clearInterval(temporizador);
+            subirNivel();
+          }
+        }
+      });
+    });
+
+    iniciarNivel();
+  </script>
+
+</body>
+</html>
